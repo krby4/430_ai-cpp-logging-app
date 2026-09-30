@@ -1,7 +1,9 @@
 #include "cpp_log/monitor.hpp"
+#include "cpp_log/storage.hpp"
 
 #include <cmath>
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -51,6 +53,28 @@ void test_network_delta_rejects_interface_changes_and_resets() {
          "interface-set change should produce missing ingress");
 }
 
+void test_database_commits_samples_and_prunes_expired_history() {
+  const auto path = std::filesystem::temp_directory_path() / "cpp-log-test.db";
+  std::filesystem::remove(path);
+  cpp_log::Database database(path.string());
+  database.initialize();
+  database.begin_write();
+  database.persist({100, 10.0, 20.0, 30.0, 40, std::nullopt, std::nullopt, false},
+                   {"boot-a", {100, 40}, {{"eth0", 2, 50}}}, {});
+  database.commit();
+
+  expect(database.sample_count() == 1, "committed sample should be queryable");
+  expect(database.latest_sample()->ingress_bytes == 40,
+         "optional ingress should round-trip through SQLite");
+
+  database.begin_write();
+  database.prune_samples_before(101);
+  database.commit();
+  expect(database.sample_count() == 0,
+         "retention cleanup should remove only samples older than cutoff");
+  std::filesystem::remove(path);
+}
+
 }  // namespace
 
 int main() {
@@ -58,5 +82,6 @@ int main() {
   test_cpu_percent_rejects_counter_reset();
   test_network_delta_sums_matching_interfaces();
   test_network_delta_rejects_interface_changes_and_resets();
+  test_database_commits_samples_and_prunes_expired_history();
   std::cout << "monitor tests passed\n";
 }
