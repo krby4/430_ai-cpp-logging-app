@@ -318,4 +318,41 @@ std::optional<Sample> Database::latest_sample() const {
   return sample;
 }
 
+std::vector<Sample> Database::samples_between(std::int64_t start, std::int64_t end) const {
+  Statement statement(connection_,
+      "SELECT captured_at, cpu_percent, memory_percent, root_disk_percent, ingress_bytes, "
+      "top_cpu_pid, top_cpu_start_ticks, top_cpu_command, top_cpu_percent, "
+      "top_memory_pid, top_memory_command, top_memory_rss_bytes, top_memory_percent, partial_process_scan "
+      "FROM samples WHERE captured_at >= ? AND captured_at < ? ORDER BY captured_at, id;");
+  statement.bind(1, start);
+  statement.bind(2, end);
+
+  std::vector<Sample> samples;
+  while (statement.step_row()) {
+    Sample sample;
+    sample.captured_at = sqlite3_column_int64(statement.get(), 0);
+    sample.cpu_percent = optional_double(statement.get(), 1);
+    sample.memory_percent = sqlite3_column_double(statement.get(), 2);
+    sample.root_disk_percent = sqlite3_column_double(statement.get(), 3);
+    sample.ingress_bytes = optional_uint64(statement.get(), 4);
+    if (sqlite3_column_type(statement.get(), 5) != SQLITE_NULL) {
+      sample.top_cpu = ProcessUsage{
+          sqlite3_column_int(statement.get(), 5),
+          static_cast<std::uint64_t>(sqlite3_column_int64(statement.get(), 6)),
+          reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 7)),
+          sqlite3_column_double(statement.get(), 8), 0};
+    }
+    if (sqlite3_column_type(statement.get(), 9) != SQLITE_NULL) {
+      sample.top_memory = ProcessUsage{
+          sqlite3_column_int(statement.get(), 9), 0,
+          reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 10)),
+          sqlite3_column_double(statement.get(), 12),
+          static_cast<std::uint64_t>(sqlite3_column_int64(statement.get(), 11))};
+    }
+    sample.partial_process_scan = sqlite3_column_int(statement.get(), 13) != 0;
+    samples.push_back(std::move(sample));
+  }
+  return samples;
+}
+
 }  // namespace cpp_log

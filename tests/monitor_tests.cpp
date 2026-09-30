@@ -68,6 +68,8 @@ void test_database_commits_samples_and_prunes_expired_history() {
   expect(database.sample_count() == 1, "committed sample should be queryable");
   expect(database.latest_sample()->ingress_bytes == 40,
          "optional ingress should round-trip through SQLite");
+  expect(database.samples_between(0, 200).size() == 1,
+         "report query should return samples inside its UTC window");
 
   database.begin_write();
   database.prune_samples_before(101);

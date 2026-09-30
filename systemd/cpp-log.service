@@ -1,0 +1,14 @@
+[Unit]
+Description=Collect a cpp-log system-monitor sample
+
+[Service]
+Type=oneshot
+User=keith
+Group=keith
+UMask=0077
+ExecStart=/srv/services/cpp-log/bin/cpp-log write
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/srv/services/cpp-log/logs

@@ -1,0 +1,11 @@
+[Unit]
+Description=Run cpp-log system-monitor collection each minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+Persistent=true
+AccuracySec=1s
+Unit=cpp-log.service
+
+[Install]
+WantedBy=timers.target

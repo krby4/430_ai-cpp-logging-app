@@ -63,6 +63,8 @@ class Database {
 
   [[nodiscard]] int sample_count() const;
   [[nodiscard]] std::optional<Sample> latest_sample() const;
+  [[nodiscard]] std::vector<Sample> samples_between(std::int64_t start,
+                                                     std::int64_t end) const;
 
  private:
   sqlite3* connection_{};
