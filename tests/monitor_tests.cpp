@@ -1,5 +1,6 @@
 #include "cpp_log/collector.hpp"
 #include "cpp_log/monitor.hpp"
+#include "cpp_log/report.hpp"
 #include "cpp_log/storage.hpp"
 
 #include <cmath>
@@ -86,6 +87,17 @@ void test_process_stat_parser_handles_spaces_in_command_name() {
   expect(parsed->start_ticks == 99, "parser should read field 22 after the command");
 }
 
+void test_sparkline_keeps_missing_data_visible() {
+  const std::string graph = cpp_log::sparkline({1.0, 2.0, std::nullopt, 4.0});
+
+  expect(graph == "▁▃·█", "sparkline should scale values and render missing buckets as gaps");
+}
+
+void test_markdown_escape_neutralizes_table_delimiters_and_newlines() {
+  expect(cpp_log::markdown_escape("worker|name\n") == "worker\\|name ",
+         "process names must not inject Markdown table cells or lines");
+}
+
 }  // namespace
 
 int main() {
@@ -95,5 +107,7 @@ int main() {
   test_network_delta_rejects_interface_changes_and_resets();
   test_database_commits_samples_and_prunes_expired_history();
   test_process_stat_parser_handles_spaces_in_command_name();
+  test_sparkline_keeps_missing_data_visible();
+  test_markdown_escape_neutralizes_table_delimiters_and_newlines();
   std::cout << "monitor tests passed\n";
 }
