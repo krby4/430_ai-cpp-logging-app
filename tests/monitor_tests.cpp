@@ -1,3 +1,4 @@
+#include "cpp_log/collector.hpp"
 #include "cpp_log/monitor.hpp"
 #include "cpp_log/storage.hpp"
 
@@ -75,6 +76,16 @@ void test_database_commits_samples_and_prunes_expired_history() {
   std::filesystem::remove(path);
 }
 
+void test_process_stat_parser_handles_spaces_in_command_name() {
+  const auto parsed = cpp_log::parse_process_stat(
+      7, "7 (worker pool) S 0 0 0 0 0 0 0 0 0 0 11 12 0 0 0 0 0 0 99");
+
+  expect(parsed.has_value(), "valid proc stat data should parse");
+  expect(parsed->command == "worker pool", "parser should preserve command spaces");
+  expect(parsed->total_ticks == 23, "parser should add user and system ticks");
+  expect(parsed->start_ticks == 99, "parser should read field 22 after the command");
+}
+
 }  // namespace
 
 int main() {
@@ -83,5 +94,6 @@ int main() {
   test_network_delta_sums_matching_interfaces();
   test_network_delta_rejects_interface_changes_and_resets();
   test_database_commits_samples_and_prunes_expired_history();
+  test_process_stat_parser_handles_spaces_in_command_name();
   std::cout << "monitor tests passed\n";
 }
